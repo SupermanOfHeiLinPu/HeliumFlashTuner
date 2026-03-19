@@ -24,7 +24,14 @@ class NoteUtils {
   static double centsFromNearest(double frequency, {double a4 = 440.0}) {
     if (frequency <= 0) return 0;
     final exactMidi = frequencyToMidiExact(frequency, a4: a4);
-    final nearestMidi = exactMidi.round();
+    final lowerMidi = exactMidi.floor();
+    final upperMidi = exactMidi.ceil();
+    final lowerDistance = exactMidi - lowerMidi;
+    final upperDistance = upperMidi - exactMidi;
+    const epsilon = 1e-9;
+    final nearestMidi = (lowerDistance - upperDistance).abs() < epsilon
+        ? lowerMidi
+        : (lowerDistance < upperDistance ? lowerMidi : upperMidi);
     return (exactMidi - nearestMidi) * 100.0;
   }
 
