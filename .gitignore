@@ -1,3 +1,13 @@
+# HeliumFlash Tuner – native build output
+native/build/
+native/JUCE/
+
+# Compiled native libraries that are placed in platform dirs by build scripts
+# (keep placeholder files, exclude actual binaries)
+flutter_app/android/app/src/main/jniLibs/**/*.so
+flutter_app/macos/Runner/*.dylib
+flutter_app/linux/bundle/
+
 # Miscellaneous
 *.class
 *.lock
