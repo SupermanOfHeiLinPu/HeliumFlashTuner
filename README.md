@@ -1,6 +1,6 @@
 # HeliumFlash Tuner
 
-**HeliumFlash Tuner** 是一款基于 **Flutter 3.41.5** 和 **JUCE 8.0.12** 构建的跨平台专业级调音器，支持 Android、macOS 和 Ubuntu（Linux）。
+**HeliumFlash Tuner** 是一款基于 **Flutter 3.41.5** 和 **JUCE 8.0.12** 构建的跨平台专业级调音器，支持 Android、macOS、Ubuntu（Linux）以及 **Windows**。
 
 ---
 
@@ -40,6 +40,9 @@ HeliumFlashTuner/
 │   ├── android/                           # Android 平台文件
 │   ├── macos/                             # macOS 平台文件（含麦克风权限）
 │   ├── linux/                             # Linux 平台文件
+│   ├── windows/                           # Windows 平台文件
+│   │   ├── CMakeLists.txt                 # Windows Flutter 应用 CMake
+│   │   └── runner/                        # Win32 Runner 源码
 │   └── test/                             # 单元测试
 │       └── note_utils_test.dart
 │
@@ -52,7 +55,8 @@ HeliumFlashTuner/
 │   └── scripts/
 │       ├── build_android.sh               # Android 交叉编译脚本
 │       ├── build_macos.sh                 # macOS Universal 编译脚本
-│       └── build_linux.sh                 # Linux x86_64 编译脚本
+│       ├── build_linux.sh                 # Linux x86_64 编译脚本
+│       └── build_windows.ps1              # Windows x64 编译脚本（PowerShell）
 │
 └── README.md
 ```
@@ -69,7 +73,8 @@ HeliumFlashTuner/
 | CMake | ≥ 3.22 |
 | C++ 编译器 | 支持 C++17（GCC 11+ / Clang 14+ / MSVC 2022+） |
 | Android NDK | r25 或更高（仅构建 Android 版本时需要） |
-| Xcode | 14+ （仅构建 macOS 版本时需要） |
+| Xcode | 14+（仅构建 macOS 版本时需要） |
+| Visual Studio | 2022（仅构建 Windows 版本时需要，需安装"使用 C++ 的桌面开发"工作负载） |
 
 ---
 
@@ -138,6 +143,24 @@ for abi in arm64-v8a armeabi-v7a x86_64; do
 done
 ```
 
+#### Windows
+
+> **环境要求**：Visual Studio 2022（含 C++ 桌面开发工作负载）、CMake 3.22+。
+
+在 **PowerShell**（或 Visual Studio Developer PowerShell）中运行：
+
+```powershell
+# 编译 x64 Release DLL
+powershell -ExecutionPolicy Bypass -File native\scripts\build_windows.ps1
+
+# 将 DLL 复制到 Flutter Windows 构建输出目录
+Copy-Item native\build\windows\Release\helium_flash_tuner.dll `
+    flutter_app\build\windows\x64\runner\Release\
+```
+
+> **提示**：`flutter build windows --release` 执行后，可执行文件位于  
+> `flutter_app\build\windows\x64\runner\Release\`，DLL 必须与其位于同一目录。
+
 ---
 
 ### 第三步：安装 Flutter 依赖
@@ -172,6 +195,13 @@ cd flutter_app
 flutter run -d android
 ```
 
+#### 在 Windows 上运行
+
+```powershell
+cd flutter_app
+flutter run -d windows
+```
+
 #### 打包发布版本
 
 ```bash
@@ -186,6 +216,9 @@ flutter build macos --release
 
 # Linux bundle
 flutter build linux --release
+
+# Windows MSIX / 可执行文件
+flutter build windows --release
 ```
 
 ---
@@ -220,7 +253,7 @@ flutter test
 
 ### FFI 通信
 
-Flutter 通过 **dart:ffi** 直接调用 JUCE 编译的共享库（`.so` / `.dylib`），以轮询方式（约 60 fps）获取最新的频率、cents、MIDI 音符号和波形数据，无 JNI 或 Platform Channel 开销。
+Flutter 通过 **dart:ffi** 直接调用 JUCE 编译的共享库（`.so` / `.dylib` / `.dll`），以轮询方式（约 60 fps）获取最新的频率、cents、MIDI 音符号和波形数据，无 JNI 或 Platform Channel 开销。
 
 ### 示波器渲染
 

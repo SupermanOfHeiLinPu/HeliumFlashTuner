@@ -7,6 +7,7 @@ native/JUCE/
 flutter_app/android/app/src/main/jniLibs/**/*.so
 flutter_app/macos/Runner/*.dylib
 flutter_app/linux/bundle/
+flutter_app/windows/runner/resources/app_icon.ico
 
 # Miscellaneous
 *.class
