@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:ffi/ffi.dart';
+import 'package:flutter/services.dart';
 
 // ---------------------------------------------------------------------------
 // Native function type definitions
@@ -48,6 +49,21 @@ typedef _TunerGetWaveform = int Function(
 
 // ---------------------------------------------------------------------------
 
+enum AudioBridgeInitStatus {
+  ready,
+  microphonePermissionDenied,
+  nativeLibraryUnavailable,
+}
+
+class AudioBridgeInitResult {
+  const AudioBridgeInitResult(this.status, {this.message});
+
+  final AudioBridgeInitStatus status;
+  final String? message;
+
+  bool get isReady => status == AudioBridgeInitStatus.ready;
+}
+
 /// Bridge between the Flutter UI and the native JUCE audio library.
 ///
 /// The native library exposes a C API (see `native/Source/TunerBridge.h`)
@@ -55,12 +71,18 @@ typedef _TunerGetWaveform = int Function(
 /// during unit tests or on unsupported platforms) the bridge operates in
 /// *stub mode* and returns synthesised demo values.
 class AudioBridge {
+  static const MethodChannel _permissionsChannel = MethodChannel(
+    'helium_flash_tuner/permissions',
+  );
+
   static AudioBridge? _instance;
   factory AudioBridge() => _instance ??= AudioBridge._();
   AudioBridge._();
 
   DynamicLibrary? _lib;
+  bool _nativeAvailable = false;
   bool _stubMode = false;
+  String? _lastError;
 
   // Bound native functions
   late _TunerInit _init;
@@ -80,35 +102,67 @@ class AudioBridge {
   double _stubA4 = 440.0;
   int _stubTick = 0;
 
+  bool get isReady => _nativeAvailable;
+  bool get isStubMode => _stubMode;
+  String? get lastError => _lastError;
+
   /// Initialises the bridge.  Must be called once before any other method.
-  void initialize({int sampleRate = 44100}) {
+  Future<AudioBridgeInitResult> initialize({
+    int sampleRate = 44100,
+    bool allowStubFallback = false,
+  }) async {
+    if (_nativeAvailable) {
+      return const AudioBridgeInitResult(AudioBridgeInitStatus.ready);
+    }
+
+    if (Platform.isMacOS) {
+      final granted = await _requestMacOSMicrophonePermission();
+      if (!granted) {
+        _lastError = 'Microphone permission was denied.';
+        _stubMode = false;
+        return const AudioBridgeInitResult(
+          AudioBridgeInitStatus.microphonePermissionDenied,
+          message: '请允许麦克风权限后再启动调音器。',
+        );
+      }
+    }
+
     try {
       _lib = _loadLibrary();
       _bindFunctions();
       _init(sampleRate);
-    } catch (_) {
-      // Fall back to stub mode when the native library is unavailable.
-      _stubMode = true;
+      _nativeAvailable = true;
+      _stubMode = false;
+      _lastError = null;
+      return const AudioBridgeInitResult(AudioBridgeInitStatus.ready);
+    } catch (error) {
+      _nativeAvailable = false;
+      _stubMode = allowStubFallback;
+      _lastError = 'Failed to initialize native audio bridge: $error';
+      return AudioBridgeInitResult(
+        AudioBridgeInitStatus.nativeLibraryUnavailable,
+        message: _lastError,
+      );
     }
   }
 
   void start() {
-    if (_stubMode) return;
+    if (_stubMode || !_nativeAvailable) return;
     _start();
   }
 
   void stop() {
-    if (_stubMode) return;
+    if (_stubMode || !_nativeAvailable) return;
     _stop();
   }
 
   void dispose() {
-    if (_stubMode) return;
+    if (_stubMode || !_nativeAvailable) return;
     _cleanup();
   }
 
   void setA4Frequency(double freq) {
-    if (_stubMode) {
+    if (_stubMode || !_nativeAvailable) {
       _stubA4 = freq;
       return;
     }
@@ -117,31 +171,36 @@ class AudioBridge {
 
   double getA4Frequency() {
     if (_stubMode) return _stubA4;
+    if (!_nativeAvailable) return _stubA4;
     return _getA4();
   }
 
   double getFrequency() {
     if (_stubMode) return _demoFrequency();
+    if (!_nativeAvailable) return 0.0;
     return _getFrequency();
   }
 
   double getCents() {
     if (_stubMode) return _demoCents();
+    if (!_nativeAvailable) return 0.0;
     return _getCents();
   }
 
   int getMidiNote() {
     if (_stubMode) return 69; // A4
+    if (!_nativeAvailable) return -1;
     return _getMidiNote();
   }
 
   double getConfidence() {
     if (_stubMode) return 0.9;
+    if (!_nativeAvailable) return 0.0;
     return _getConfidence();
   }
 
   void setNoiseFloor(double db) {
-    if (_stubMode) return;
+    if (_stubMode || !_nativeAvailable) return;
     _setNoiseFloor(db);
   }
 
@@ -151,6 +210,7 @@ class AudioBridge {
     if (_stubMode) {
       return _demoWaveform(outBuffer);
     }
+    if (!_nativeAvailable) return 0;
     final ptr =
         malloc.allocate<Float>(sizeOf<Float>() * outBuffer.length);
     try {
@@ -174,7 +234,26 @@ class AudioBridge {
       return DynamicLibrary.open('lib$libName.so');
     }
     if (Platform.isMacOS) {
-      return DynamicLibrary.open('lib$libName.dylib');
+      final fileName = 'lib$libName.dylib';
+      final executableDir = File(Platform.resolvedExecutable).parent;
+      final contentsDir = executableDir.parent;
+      final candidates = <String>[
+        '${executableDir.path}/$fileName',
+        '${contentsDir.path}/Frameworks/$fileName',
+        fileName,
+      ];
+
+      for (final candidate in candidates) {
+        if (candidate == fileName || File(candidate).existsSync()) {
+          try {
+            return DynamicLibrary.open(candidate);
+          } catch (_) {
+            // Try the next candidate path.
+          }
+        }
+      }
+
+      throw ArgumentError('Unable to locate $fileName in the app bundle.');
     }
     if (Platform.isWindows) {
       return DynamicLibrary.open('$libName.dll');
@@ -215,6 +294,18 @@ class AudioBridge {
     _getWaveform =
         lib.lookupFunction<_TunerGetWaveformNative, _TunerGetWaveform>(
             'tuner_get_waveform');
+  }
+
+  Future<bool> _requestMacOSMicrophonePermission() async {
+    try {
+      final granted = await _permissionsChannel.invokeMethod<bool>(
+        'requestMicrophoneAccess',
+      );
+      return granted ?? false;
+    } catch (error) {
+      _lastError = 'Unable to query macOS microphone permission: $error';
+      return false;
+    }
   }
 
   // --- Demo / stub helpers ---------------------------------------------------

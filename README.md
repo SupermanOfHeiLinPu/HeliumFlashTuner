@@ -121,11 +121,9 @@ cp native/build/linux/libhelium_flash_tuner.so \
 ```bash
 # 编译 arm64 + x86_64 通用二进制
 bash native/scripts/build_macos.sh
-
-# 将编译好的 .dylib 文件复制到 Flutter macOS bundle
-cp native/build/macos_universal/libhelium_flash_tuner.dylib \
-   flutter_app/macos/Runner/
 ```
+
+`flutter_app/macos` 现在会在 Xcode 构建阶段自动把 `native/build/macos_universal/` 或对应架构目录中的 `libhelium_flash_tuner.dylib` 复制进 app bundle，因此运行 `flutter run -d macos` 之前只需要先执行一次上面的原生库编译脚本。
 
 #### Android
 
@@ -187,6 +185,8 @@ flutter run -d linux
 cd flutter_app
 flutter run -d macos
 ```
+
+首次启动会显式请求麦克风权限。如果原生动态库缺失或权限被拒绝，界面会显示原因，并停止输出演示用的伪造波形与音高数据。
 
 #### 在 Android 上运行
 

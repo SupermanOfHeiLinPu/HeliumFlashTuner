@@ -311,7 +311,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "echo \"$PRODUCT_NAME.app\" > \"$PROJECT_DIR\"/Flutter/ephemeral/.app_filename && \"$FLUTTER_ROOT\"/packages/flutter_tools/bin/macos_assemble.sh embed\n";
+			shellScript = "set -e\necho \"$PRODUCT_NAME.app\" > \"$PROJECT_DIR\"/Flutter/ephemeral/.app_filename\n\"$FLUTTER_ROOT\"/packages/flutter_tools/bin/macos_assemble.sh embed\nNATIVE_LIB_NAME=libhelium_flash_tuner.dylib\nNATIVE_BUILD_DIR=\"$PROJECT_DIR/../../native/build\"\nAPP_MACOS_DIR=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/MacOS\"\nfor candidate in \\\n  \"$NATIVE_BUILD_DIR/macos_universal/$NATIVE_LIB_NAME\" \\\n  \"$NATIVE_BUILD_DIR/macos_$NATIVE_ARCH_ACTUAL/$NATIVE_LIB_NAME\" \\\n  \"$NATIVE_BUILD_DIR/macos_arm64/$NATIVE_LIB_NAME\" \\\n  \"$NATIVE_BUILD_DIR/macos_x86_64/$NATIVE_LIB_NAME\"; do\n  if [ -f \"$candidate\" ]; then\n    cp -f \"$candidate\" \"$APP_MACOS_DIR/$NATIVE_LIB_NAME\"\n    codesign --force --sign - --timestamp=none \"$APP_MACOS_DIR/$NATIVE_LIB_NAME\"\n    exit 0\n  fi\ndone\necho \"warning: $NATIVE_LIB_NAME was not found under $NATIVE_BUILD_DIR; the tuner will run without native audio capture.\" >&2\n";
 		};
 		33CC111D2044C6BA0003C045 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;

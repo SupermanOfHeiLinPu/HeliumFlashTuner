@@ -80,11 +80,15 @@ class _TunerBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final model = context.watch<TunerModel>();
+
     return Column(
       children: [
         const SizedBox(height: 12),
         const _InfoBar(),
         const SizedBox(height: 12),
+        if (!model.isReady) const _StartupStatusCard(),
+        if (!model.isReady) const SizedBox(height: 12),
         const Expanded(child: _OscilloscopeSection()),
         const SizedBox(height: 24),
       ],
@@ -204,6 +208,56 @@ class _OscilloscopeSection extends StatelessWidget {
             ),
             child: const SizedBox.expand(),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StartupStatusCard extends StatelessWidget {
+  const _StartupStatusCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final model = context.watch<TunerModel>();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF161B22),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF30363D)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              model.isInitializing ? Icons.mic : Icons.warning_amber_rounded,
+              color: model.isInitializing
+                  ? const Color(0xFF00CC66)
+                  : const Color(0xFFFFA657),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                model.statusMessage,
+                style: const TextStyle(
+                  color: Color(0xFFE6EDF3),
+                  fontSize: 13,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            TextButton(
+              onPressed: model.isInitializing
+                  ? null
+                  : () => context.read<TunerModel>().retryInitialization(),
+              child: const Text('重试'),
+            ),
+          ],
         ),
       ),
     );
