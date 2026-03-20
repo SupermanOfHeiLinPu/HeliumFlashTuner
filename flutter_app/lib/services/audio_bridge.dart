@@ -82,6 +82,7 @@ class AudioBridge {
   DynamicLibrary? _lib;
   bool _nativeAvailable = false;
   bool _stubMode = false;
+  bool _disposed = false;
   String? _lastError;
 
   // Bound native functions
@@ -111,6 +112,10 @@ class AudioBridge {
     int sampleRate = 44100,
     bool allowStubFallback = false,
   }) async {
+    if (_disposed) {
+      _disposed = false;
+    }
+
     if (_nativeAvailable) {
       return const AudioBridgeInitResult(AudioBridgeInitStatus.ready);
     }
@@ -147,18 +152,35 @@ class AudioBridge {
   }
 
   void start() {
-    if (_stubMode || !_nativeAvailable) return;
+    if (_disposed || _stubMode || !_nativeAvailable) return;
     _start();
   }
 
   void stop() {
-    if (_stubMode || !_nativeAvailable) return;
+    if (_disposed || _stubMode || !_nativeAvailable) return;
     _stop();
   }
 
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
+
     if (_stubMode || !_nativeAvailable) return;
-    _cleanup();
+
+    try {
+      _stop();
+    } catch (_) {
+      // Best effort during shutdown.
+    }
+
+    try {
+      _cleanup();
+    } catch (_) {
+      // Best effort during shutdown.
+    }
+
+    _nativeAvailable = false;
+    _lib = null;
   }
 
   void setA4Frequency(double freq) {
@@ -170,43 +192,49 @@ class AudioBridge {
   }
 
   double getA4Frequency() {
+    if (_disposed) return _stubA4;
     if (_stubMode) return _stubA4;
     if (!_nativeAvailable) return _stubA4;
     return _getA4();
   }
 
   double getFrequency() {
+    if (_disposed) return 0.0;
     if (_stubMode) return _demoFrequency();
     if (!_nativeAvailable) return 0.0;
     return _getFrequency();
   }
 
   double getCents() {
+    if (_disposed) return 0.0;
     if (_stubMode) return _demoCents();
     if (!_nativeAvailable) return 0.0;
     return _getCents();
   }
 
   int getMidiNote() {
+    if (_disposed) return -1;
     if (_stubMode) return 69; // A4
     if (!_nativeAvailable) return -1;
     return _getMidiNote();
   }
 
   double getConfidence() {
+    if (_disposed) return 0.0;
     if (_stubMode) return 0.9;
     if (!_nativeAvailable) return 0.0;
     return _getConfidence();
   }
 
   void setNoiseFloor(double db) {
-    if (_stubMode || !_nativeAvailable) return;
+    if (_disposed || _stubMode || !_nativeAvailable) return;
     _setNoiseFloor(db);
   }
 
   /// Fills [outBuffer] with the most recent waveform samples.
   /// Returns the number of samples actually written.
   int getWaveform(Float32List outBuffer) {
+    if (_disposed) return 0;
     if (_stubMode) {
       return _demoWaveform(outBuffer);
     }

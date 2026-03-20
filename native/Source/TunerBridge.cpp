@@ -10,6 +10,12 @@ extern "C" {
 
 TUNER_EXPORT void tuner_init (int sampleRate)
 {
+    if (g_processor)
+    {
+        g_processor->stop();
+        g_processor.reset();
+    }
+
     g_processor = std::make_unique<TunerProcessor> (
         static_cast<double> (sampleRate), 4096);
 }
@@ -26,7 +32,11 @@ TUNER_EXPORT void tuner_stop ()
 
 TUNER_EXPORT void tuner_cleanup ()
 {
-    g_processor.reset();
+    if (g_processor)
+    {
+        g_processor->stop();
+        g_processor.reset();
+    }
 }
 
 TUNER_EXPORT void tuner_set_a4_frequency (double freq)

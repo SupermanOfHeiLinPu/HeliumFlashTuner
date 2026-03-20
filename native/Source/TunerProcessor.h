@@ -60,13 +60,14 @@ private:
     PitchDetector            pitchDetector;
 
     // Noise gate
-    double noiseFloorLinear = 0.0;   ///< amplitude threshold (linear)
+    std::atomic<double> noiseFloorLinear { 0.0 };   ///< amplitude threshold (linear)
 
     // Waveform ring buffer (lock-free single-producer single-consumer)
     static constexpr int kWaveformCapacity = 8192;
     std::vector<float>   waveRing;
     std::atomic<int>     writeHead { 0 };
     std::atomic<int>     readHead  { 0 };
+    std::mutex           waveMutex;
 
     // Last analysis buffer (copied from ring for pitch detection)
     std::vector<float> analysisBuf;

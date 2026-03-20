@@ -50,11 +50,13 @@ void TunerProcessor::setA4Frequency (double hz)
 
 void TunerProcessor::setNoiseFloor (double dBFS)
 {
-    noiseFloorLinear = std::pow (10.0, dBFS / 20.0);
+    noiseFloorLinear.store (std::pow (10.0, dBFS / 20.0), std::memory_order_release);
 }
 
 int TunerProcessor::getWaveform (float* out, int maxSamples)
 {
+    std::lock_guard<std::mutex> lock (waveMutex);
+
     const int capacity  = kWaveformCapacity;
     const int wh        = writeHead.load (std::memory_order_acquire);
     const int rh        = readHead.load  (std::memory_order_relaxed);
@@ -95,7 +97,7 @@ void TunerProcessor::audioDeviceIOCallbackWithContext (
     int                  numSamples,
     const juce::AudioIODeviceCallbackContext& /*context*/)
 {
-    if (numInputChannels == 0 || inputChannelData == nullptr) return;
+    if (numSamples <= 0 || numInputChannels == 0 || inputChannelData == nullptr) return;
 
     const float* src = inputChannelData[0];
     if (src == nullptr) return;
@@ -104,9 +106,11 @@ void TunerProcessor::audioDeviceIOCallbackWithContext (
     double rms = 0.0;
     for (int i = 0; i < numSamples; ++i)
         rms += static_cast<double> (src[i]) * static_cast<double> (src[i]);
-    rms = std::sqrt (rms / numSamples);
+    rms = std::sqrt (rms / static_cast<double> (numSamples));
 
     // Write samples into waveform ring buffer
+    {
+    std::lock_guard<std::mutex> lock (waveMutex);
     const int cap = kWaveformCapacity;
     int wh = writeHead.load (std::memory_order_relaxed);
     for (int i = 0; i < numSamples; ++i)
@@ -115,8 +119,9 @@ void TunerProcessor::audioDeviceIOCallbackWithContext (
         wh = (wh + 1) % cap;
     }
     writeHead.store (wh, std::memory_order_release);
+    }
 
-    if (rms < noiseFloorLinear)
+    if (rms < noiseFloorLinear.load (std::memory_order_acquire))
     {
         detectedFreq.store (0.0);
         detectedCents.store (0.0);
