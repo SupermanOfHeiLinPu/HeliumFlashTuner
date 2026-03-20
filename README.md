@@ -102,8 +102,10 @@ git clone --depth 1 --branch 8.0.12 https://github.com/juce-framework/JUCE.git n
 
 ```bash
 # 安装依赖
+sudo apt-get update
 sudo apt-get install -y \
-    build-essential cmake \
+  build-essential cmake pkg-config clang ninja-build \
+  libgtk-3-dev \
     libasound2-dev libx11-dev libxext-dev libxinerama-dev \
     libxrandr-dev libxcursor-dev libfreetype6-dev \
     libgl1-mesa-dev
@@ -115,6 +117,8 @@ bash native/scripts/build_linux.sh
 cp native/build/linux/libhelium_flash_tuner.so \
    flutter_app/linux/bundle/lib/
 ```
+
+> **Ubuntu 24 提示**：如果你从旧工程迁移后缺少 `flutter_app/linux/flutter/CMakeLists.txt` 或 `flutter_app/linux/runner/*`，可在 `flutter_app` 目录执行 `flutter create --platforms=linux .` 重新生成 Linux 脚手架文件。
 
 #### macOS
 
