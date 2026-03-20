@@ -105,6 +105,7 @@ class TunerModel extends ChangeNotifier {
     final result = await _bridge.initialize();
     switch (result.status) {
       case AudioBridgeInitStatus.ready:
+        _bridge.setNoiseFloor(-55.0);
         _bridge.start();
         _startupState = TunerStartupState.ready;
         _statusMessage = '';

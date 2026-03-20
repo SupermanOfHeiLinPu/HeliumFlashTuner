@@ -9,6 +9,7 @@
 
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_dsp/juce_dsp.h>
+#include <array>
 #include <atomic>
 #include <mutex>
 #include <vector>
@@ -79,8 +80,22 @@ private:
     std::atomic<int>    detectedMidi    { -1 };
     std::atomic<double> detectedConf    { 0.0 };
 
+    // Audio-thread-only tracking state used to stabilize the displayed pitch.
+    static constexpr int kFreqHistorySize = 5;
+    std::array<double, kFreqHistorySize> recentFreqs {};
+    int    recentFreqIndex      = 0;
+    int    recentFreqCount      = 0;
+    int    missedDetectionFrames = 0;
+    bool   hasSmoothedFrequency = false;
+    double smoothedLogFrequency = 0.0;
+    int    lockedMidiNote       = -1;
+
     // Helpers
     void   processBlock (const float* samples, int n);
+    void   resetTrackingState ();
+    void   pushFrequencySample (double freq);
+    double medianFrequency () const;
+    int    updateLockedMidi (double freq);
     double freqToCents  (double freq, int midiNote) const;
     int    freqToMidi   (double freq) const;
     double midiToFreq   (int    midi) const;
