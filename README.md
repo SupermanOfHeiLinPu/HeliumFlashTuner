@@ -183,6 +183,8 @@ cd flutter_app
 flutter run -d linux
 ```
 
+> **Linux 终止提示**：当前 Linux Runner 已对 `SIGTERM` / `SIGINT` 做了快速退出处理（例如 `timeout`、外部 `kill`、终端中断），用于避免某些系统环境下退出阶段触发的原生音频栈崩溃。
+
 #### 在 macOS 上运行
 
 ```bash
@@ -223,6 +225,29 @@ flutter build linux --release
 
 # Windows MSIX / 可执行文件
 flutter build windows --release
+```
+
+---
+
+## Linux 常见问题排查
+
+### 1) `linux/flutter/CMakeLists.txt` 缺失
+
+```bash
+cd flutter_app
+flutter create --platforms=linux .
+```
+
+### 2) `gtk+-3.0` not found
+
+确认已安装 `libgtk-3-dev` 与 `pkg-config`（见上方 Ubuntu 依赖安装命令）。
+
+### 3) `undefined symbol: curl_easy_getinfo`
+
+确认系统安装了 `libcurl4-openssl-dev`，并重新编译 native 库：
+
+```bash
+bash native/scripts/build_linux.sh
 ```
 
 ---
