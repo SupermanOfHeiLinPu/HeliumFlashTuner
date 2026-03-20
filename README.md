@@ -105,7 +105,7 @@ git clone --depth 1 --branch 8.0.12 https://github.com/juce-framework/JUCE.git n
 sudo apt-get update
 sudo apt-get install -y \
   build-essential cmake pkg-config clang ninja-build \
-  libgtk-3-dev \
+  libgtk-3-dev libcurl4-openssl-dev \
     libasound2-dev libx11-dev libxext-dev libxinerama-dev \
     libxrandr-dev libxcursor-dev libfreetype6-dev \
     libgl1-mesa-dev

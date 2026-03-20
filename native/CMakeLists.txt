@@ -34,6 +34,8 @@ add_library(helium_flash_tuner SHARED
     Source/PitchDetector.cpp
 )
 
+find_package(CURL REQUIRED)
+
 target_include_directories(helium_flash_tuner
     PRIVATE
         Source
@@ -42,10 +44,11 @@ target_include_directories(helium_flash_tuner
 # Expose the JUCE headers and link the required modules.
 target_link_libraries(helium_flash_tuner
     PRIVATE
-        juce::juce_audio_basics
-        juce::juce_audio_devices
-        juce::juce_dsp
-        juce::juce_core
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_dsp
+    juce::juce_core
+    CURL::libcurl
 )
 
 # Make all symbols hidden by default; only functions marked TUNER_EXPORT
