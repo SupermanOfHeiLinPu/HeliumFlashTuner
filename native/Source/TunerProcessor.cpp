@@ -59,15 +59,17 @@ int TunerProcessor::getWaveform (float* out, int maxSamples)
 
     const int capacity  = kWaveformCapacity;
     const int wh        = writeHead.load (std::memory_order_acquire);
-    const int rh        = readHead.load  (std::memory_order_relaxed);
-    const int available = (wh - rh + capacity) % capacity;
+    const int available = std::min (
+        availableSamples.load (std::memory_order_acquire), capacity);
 
     const int n = std::min (available, maxSamples);
+    const int start = (wh - n + capacity) % capacity;
+
     for (int i = 0; i < n; ++i)
     {
-        out[i] = waveRing[static_cast<size_t> ((rh + i) % capacity)];
+        out[i] = waveRing[static_cast<size_t> ((start + i) % capacity)];
     }
-    readHead.store ((rh + n) % capacity, std::memory_order_release);
+
     return n;
 }
 
@@ -108,19 +110,6 @@ void TunerProcessor::audioDeviceIOCallbackWithContext (
         rms += static_cast<double> (src[i]) * static_cast<double> (src[i]);
     rms = std::sqrt (rms / static_cast<double> (numSamples));
 
-    // Write samples into waveform ring buffer
-    {
-    std::lock_guard<std::mutex> lock (waveMutex);
-    const int cap = kWaveformCapacity;
-    int wh = writeHead.load (std::memory_order_relaxed);
-    for (int i = 0; i < numSamples; ++i)
-    {
-        waveRing[static_cast<size_t> (wh)] = src[i];
-        wh = (wh + 1) % cap;
-    }
-    writeHead.store (wh, std::memory_order_release);
-    }
-
     if (rms < noiseFloorLinear.load (std::memory_order_acquire))
     {
         detectedFreq.store (0.0);
@@ -128,6 +117,24 @@ void TunerProcessor::audioDeviceIOCallbackWithContext (
         detectedMidi.store (-1);
         detectedConf.store (0.0);
         return;
+    }
+
+    // Only refresh the displayed waveform when input is above the noise floor.
+    {
+        std::lock_guard<std::mutex> lock (waveMutex);
+        const int cap = kWaveformCapacity;
+        int wh = writeHead.load (std::memory_order_relaxed);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            waveRing[static_cast<size_t> (wh)] = src[i];
+            wh = (wh + 1) % cap;
+        }
+        writeHead.store (wh, std::memory_order_release);
+
+        const int currentAvailable = availableSamples.load (std::memory_order_relaxed);
+        availableSamples.store (
+            std::min (cap, currentAvailable + numSamples),
+            std::memory_order_release);
     }
 
     processBlock (src, numSamples);

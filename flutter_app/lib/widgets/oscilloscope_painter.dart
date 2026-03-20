@@ -58,7 +58,7 @@ class OscilloscopePainter extends CustomPainter {
       ..strokeWidth = 1.0;
     canvas.drawLine(Offset(0, cy), Offset(w, cy), centrePaint);
 
-    if (!isDetected || waveform.isEmpty) return;
+    if (waveform.isEmpty || !_hasVisibleWaveform()) return;
 
     // ------------------------------------------------------------------
     // 4. Build waveform path
@@ -79,7 +79,7 @@ class OscilloscopePainter extends CustomPainter {
     // ------------------------------------------------------------------
     // 5. Determine fill colours based on cents deviation
     // ------------------------------------------------------------------
-    final bool inTune = cents.abs() <= 5.0;
+    final bool inTune = isDetected && cents.abs() <= 5.0;
 
     // We draw two filled regions:
     //   a) between waveform and centre line
@@ -103,9 +103,11 @@ class OscilloscopePainter extends CustomPainter {
       linePath.lineTo(points[i].dx, points[i].dy);
     }
     final linePaint = Paint()
-      ..color = inTune
-          ? const Color(0xFF00CC66)
-          : const Color(0xFFFF3B30)
+      ..color = !isDetected
+          ? const Color(0xFF8B949E)
+          : inTune
+              ? const Color(0xFF00CC66)
+              : const Color(0xFFFF3B30)
       ..strokeWidth = 1.5
       ..style = PaintingStyle.stroke;
     canvas.drawPath(linePath, linePaint);
@@ -116,12 +118,10 @@ class OscilloscopePainter extends CustomPainter {
     final bandBorderPaint = Paint()
       ..color = const Color(0xFF00CC66).withOpacity(0.7)
       ..strokeWidth = 0.8;
-    canvas.drawLine(
-        Offset(0, cy - bandHalfHeight), Offset(w, cy - bandHalfHeight),
-        bandBorderPaint);
-    canvas.drawLine(
-        Offset(0, cy + bandHalfHeight), Offset(w, cy + bandHalfHeight),
-        bandBorderPaint);
+    canvas.drawLine(Offset(0, cy - bandHalfHeight),
+        Offset(w, cy - bandHalfHeight), bandBorderPaint);
+    canvas.drawLine(Offset(0, cy + bandHalfHeight),
+        Offset(w, cy + bandHalfHeight), bandBorderPaint);
   }
 
   void _drawFilledWaveform({
@@ -135,7 +135,14 @@ class OscilloscopePainter extends CustomPainter {
     final h = size.height;
     final w = size.width;
 
-    if (inTune) {
+    if (!isDetected) {
+      final path = _buildFillPath(points, cy, w);
+      canvas.drawPath(
+          path,
+          Paint()
+            ..color = const Color(0x338B949E)
+            ..style = PaintingStyle.fill);
+    } else if (inTune) {
       // Fill everything between waveform and centre – green
       final path = _buildFillPath(points, cy, w);
       canvas.drawPath(
@@ -193,10 +200,17 @@ class OscilloscopePainter extends CustomPainter {
     return path;
   }
 
+  bool _hasVisibleWaveform() {
+    for (final sample in waveform) {
+      if (sample.abs() > 0.0001) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @override
   bool shouldRepaint(OscilloscopePainter old) {
-    return old.waveform != waveform ||
-        old.cents != cents ||
-        old.isDetected != isDetected;
+    return true;
   }
 }

@@ -62,11 +62,11 @@ private:
     // Noise gate
     std::atomic<double> noiseFloorLinear { 0.0 };   ///< amplitude threshold (linear)
 
-    // Waveform ring buffer (lock-free single-producer single-consumer)
+    // Waveform ring buffer storing the most recent input snapshot.
     static constexpr int kWaveformCapacity = 8192;
     std::vector<float>   waveRing;
     std::atomic<int>     writeHead { 0 };
-    std::atomic<int>     readHead  { 0 };
+    std::atomic<int>     availableSamples { 0 };
     std::mutex           waveMutex;
 
     // Last analysis buffer (copied from ring for pitch detection)

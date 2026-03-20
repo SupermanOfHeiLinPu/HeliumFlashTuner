@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/foundation.dart';
 
 import '../services/audio_bridge.dart';
@@ -38,7 +40,9 @@ class TunerModel extends ChangeNotifier {
   bool _isBootstrapping = false;
 
   static const int waveformLength = 1024;
-  final Float32List _waveform = Float32List(waveformLength);
+  final Float32List _displayWaveform = Float32List(waveformLength);
+  final Float32List _scratchWaveform = Float32List(waveformLength);
+  int _frozenMidiNote = -1;
 
   // ---- Getters ----
   double get a4Frequency => _a4Frequency;
@@ -47,7 +51,7 @@ class TunerModel extends ChangeNotifier {
   double get cents => _cents;
   int get midiNote => _midiNote;
   double get confidence => _confidence;
-  Float32List get waveform => _waveform;
+  Float32List get waveform => _displayWaveform;
   TunerStartupState get startupState => _startupState;
   String get statusMessage => _statusMessage;
   bool get isReady => _startupState == TunerStartupState.ready;
@@ -56,9 +60,9 @@ class TunerModel extends ChangeNotifier {
   bool get isDetected => _confidence > 0.4 && _frequency > 0;
 
   String get noteName {
-    if (!isDetected) return '--';
+    if (_frozenMidiNote < 0) return '--';
     return NoteUtils.noteName(
-      _midiNote,
+      _frozenMidiNote,
       useHelmholtz: _notationStyle == NotationStyle.helmholtz,
     );
   }
@@ -109,8 +113,7 @@ class TunerModel extends ChangeNotifier {
         _statusMessage = '未获得麦克风权限。请在系统设置中允许此应用访问麦克风。';
       case AudioBridgeInitStatus.nativeLibraryUnavailable:
         _startupState = TunerStartupState.nativeUnavailable;
-        _statusMessage =
-            result.message ?? '原生音频库未加载，当前不会显示伪造的波形或音高数据。';
+        _statusMessage = result.message ?? '原生音频库未加载，当前不会显示伪造的波形或音高数据。';
     }
 
     _isBootstrapping = false;
@@ -127,13 +130,22 @@ class TunerModel extends ChangeNotifier {
     _midiNote = _bridge.getMidiNote();
     _confidence = _bridge.getConfidence();
 
-    final n = _bridge.getWaveform(_waveform);
-    if (n < waveformLength) {
+    if (!isDetected) {
+      notifyListeners();
+      return;
+    }
+
+    final n = _bridge.getWaveform(_scratchWaveform);
+    if (n > 0) {
+      _displayWaveform.setAll(0, _scratchWaveform);
+    }
+    if (n > 0 && n < waveformLength) {
       // Zero-pad if fewer samples are available
       for (int i = n; i < waveformLength; i++) {
-        _waveform[i] = 0.0;
+        _displayWaveform[i] = 0.0;
       }
     }
+    _frozenMidiNote = _midiNote;
 
     notifyListeners();
   }

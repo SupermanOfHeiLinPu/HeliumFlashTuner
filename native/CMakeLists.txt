@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
-project(helium_flash_tuner_native VERSION 1.0.0 LANGUAGES CXX)
+project(helium_flash_tuner_native VERSION 1.0.0 LANGUAGES CXX OBJCXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_OBJCXX_STANDARD 17)
+set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+set(CMAKE_OBJCXX_EXTENSIONS OFF)
 
 # ---------------------------------------------------------------------------
 # JUCE
@@ -34,8 +38,6 @@ add_library(helium_flash_tuner SHARED
     Source/PitchDetector.cpp
 )
 
-find_package(CURL REQUIRED)
-
 target_include_directories(helium_flash_tuner
     PRIVATE
         Source
@@ -48,7 +50,6 @@ target_link_libraries(helium_flash_tuner
     juce::juce_audio_devices
     juce::juce_dsp
     juce::juce_core
-    CURL::libcurl
 )
 
 # Make all symbols hidden by default; only functions marked TUNER_EXPORT
