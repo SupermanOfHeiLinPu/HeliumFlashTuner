@@ -1,0 +1,65 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build Android APK",
+			"type": "shell",
+			"command": "cd flutter_app && flutter build apk --release",
+			"isBackground": false
+		},
+		{
+			"label": "Clean Gradle Wrapper Cache",
+			"type": "shell",
+			"command": "rm -f /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14-all.zip.lck /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14-all.zip.part",
+			"isBackground": false
+		},
+		{
+			"label": "Build Android APK",
+			"type": "shell",
+			"command": "cd flutter_app && flutter build apk --release",
+			"isBackground": false
+		},
+		{
+			"label": "List Gradle Processes",
+			"type": "shell",
+			"command": "ps -ax | grep -E 'gradle|Gradle|java' | grep -v grep",
+			"isBackground": false
+		},
+		{
+			"label": "Kill Gradle Processes",
+			"type": "shell",
+			"command": "pkill -f 'org.gradle.wrapper.GradleWrapperMain' || true && pkill -f 'org.gradle.launcher.daemon.bootstrap.GradleDaemon' || true && rm -f /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14-all.zip.lck /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14-all.zip.part",
+			"isBackground": false
+		},
+		{
+			"label": "List Gradle Processes",
+			"type": "shell",
+			"command": "ps -ax | grep -E 'gradle|Gradle|java' | grep -v grep",
+			"isBackground": false
+		},
+		{
+			"label": "Inspect Gradle State",
+			"type": "shell",
+			"command": "(ps -ax | grep -E 'gradle|Gradle|java' | grep -v grep || true) && echo '---' && ls -la /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj",
+			"isBackground": false
+		},
+		{
+			"label": "Download Gradle 8.14",
+			"type": "shell",
+			"command": "mkdir -p /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj && curl -L --fail https://services.gradle.org/distributions/gradle-8.14-all.zip -o /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14-all.zip",
+			"isBackground": false
+		},
+		{
+			"label": "Check Gradle Zip",
+			"type": "shell",
+			"command": "ls -lh /Users/cc/.gradle/wrapper/dists/gradle-8.14-all/c2qonpi39x1mddn7hk5gh9iqj/gradle-8.14-all.zip || true",
+			"isBackground": false
+		},
+		{
+			"label": "Build Android APK Fresh",
+			"type": "shell",
+			"command": "cd flutter_app && flutter build apk --release",
+			"isBackground": false
+		}
+	]
+}

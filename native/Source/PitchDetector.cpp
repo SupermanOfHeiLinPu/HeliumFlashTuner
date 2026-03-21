@@ -1,7 +1,6 @@
 #include "PitchDetector.h"
 #include <cmath>
 #include <algorithm>
-#include <limits>
 
 PitchDetector::PitchDetector (double sr, int bufSize)
     : sampleRate (sr), bufferSize (bufSize)
@@ -134,7 +133,7 @@ double PitchDetector::parabolicInterp (int tau, int halfW) const
     const double s1 = yinBuffer[static_cast<size_t> (tau)];
     const double s2 = yinBuffer[static_cast<size_t> (tau + 1)];
 
-    const double denom = 2.0 * (2.0 * s1 - s0 - s2);
+    const double denom = 2.0 * (s0 - 2.0 * s1 + s2);
     if (std::abs (denom) < 1e-12)
         return static_cast<double> (tau);
 

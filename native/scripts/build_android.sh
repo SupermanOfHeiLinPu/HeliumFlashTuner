@@ -22,18 +22,36 @@ API_LEVEL="${ANDROID_API_LEVEL:-23}"
 
 ABIS=("arm64-v8a" "armeabi-v7a" "x86_64")
 
+parallel_jobs() {
+    if command -v nproc >/dev/null 2>&1; then
+        nproc
+        return
+    fi
+
+    if command -v sysctl >/dev/null 2>&1; then
+        sysctl -n hw.ncpu
+        return
+    fi
+
+    echo 4
+}
+
+JOBS="${CMAKE_BUILD_PARALLEL_LEVEL:-$(parallel_jobs)}"
+
 build_abi() {
     local abi="$1"
     local dir="${NATIVE_DIR}/build/android/${abi}"
     echo "==> Building ABI: ${abi} …"
+    rm -rf "${dir}/CMakeCache.txt" "${dir}/CMakeFiles"
     mkdir -p "${dir}"
     cmake "${NATIVE_DIR}" -B "${dir}" \
         -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
         -DANDROID_ABI="${abi}" \
         -DANDROID_PLATFORM="android-${API_LEVEL}" \
         -DCMAKE_BUILD_TYPE=Release \
         ${JUCE_PATH:+-DJUCE_PATH="${JUCE_PATH}"}
-    cmake --build "${dir}" --config Release --parallel "$(nproc)"
+    cmake --build "${dir}" --config Release --parallel "${JOBS}"
 }
 
 for abi in "${ABIS[@]}"; do

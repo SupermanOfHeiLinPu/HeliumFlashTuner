@@ -72,6 +72,7 @@ private:
 
     // Last analysis buffer (copied from ring for pitch detection)
     std::vector<float> analysisBuf;
+    std::vector<float> analysisWork;
 
     // Atomic results
     std::atomic<double> a4Freq          { 440.0 };
@@ -89,12 +90,17 @@ private:
     bool   hasSmoothedFrequency = false;
     double smoothedLogFrequency = 0.0;
     int    lockedMidiNote       = -1;
+    int    pendingHighJumpMidi  = -1;
+    int    pendingHighJumpFrames = 0;
 
     // Helpers
     void   processBlock (const float* samples, int n);
     void   resetTrackingState ();
     void   pushFrequencySample (double freq);
     double medianFrequency () const;
+    double normalizedAutocorrelationAtLag (int lag) const;
+    double refineFrequencyCandidate (double freq) const;
+    double normalizeFrequencyCandidate (double freq) const;
     int    updateLockedMidi (double freq);
     double freqToCents  (double freq, int midiNote) const;
     int    freqToMidi   (double freq) const;
